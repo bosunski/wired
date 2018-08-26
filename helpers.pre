@@ -1,0 +1,98 @@
+<?php
+
+function startProcess($tag, $command, $log = null)
+{
+	$log = $log ?? "/dev/null";
+	$output = "> {$log} 2> {$log}";
+
+	exec("$command tag={$tag} {$output} &");
+}
+
+function identifyProcess($tag)
+{
+	exec("ps -ax | grep '[t]ag={$tag}'", $lines);
+	$parts = explode(" ", trim($lines[0]));
+
+	return (int) $parts[0];
+}
+
+function stopProcess($tag)
+{
+	$pid = identifyProcess($tag);
+
+	if (!$pid) {
+		return;
+	}
+
+	exec("kill -9 {$pid}");
+}
+
+use Aerys\Request;
+use Amp\Promise;
+
+function fields(Request $request): Promise
+{
+	return Amp\call(function () use ($request) {
+		$parsed = yield Aerys\parseBody($request);
+		$fields = $parsed->getAll()["fields"];
+
+		foreach ($fields as $key =>$value) {
+			if (is_array($value) && count($value) === 1) {
+				$fields[$key] = $value[0];
+			}
+		}
+
+		return $fields;
+	});
+}
+
+use Amp\ParallelFunctions;
+use League\Plates\Engine;
+
+async function view(string $path, array $data = [])
+{
+//	return Amp\call(function () use ($path, $data) {
+		$templates = __DIR__ . "/resources/views";
+
+		$parallel = ParallelFunctions\parallel(() => {
+			$engine = new Engine($templates);
+			return $engine->render($path, $data);
+		});
+
+		$response = await $parallel();
+
+		return $response;
+//	});
+}
+
+use Amp\Mysql;
+
+function connect(): Promise
+{
+	return Amp\call(function () {
+		static $connection;
+
+		if ($connection) {
+			return $connection;
+		}
+
+		$host = "127.0.0.1";
+		$port = "3306";
+		$name = "async";
+		$user = "root";
+		$pass = "";
+
+		$connection = yield Mysql\connect("host={$host}:{$port};user={$user};pass={$pass};db={$name}");
+
+		return $connection;
+	});
+}
+
+async function prepare($query, array $values = [])
+{
+	$connection = await connect();
+	$statement = await $connection->prepare($query);
+	$result = await $statement->execute($values);
+
+	return $result;
+}
