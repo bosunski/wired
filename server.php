@@ -13,7 +13,6 @@ $root = new Root(__DIR__ . "/public");
 $host = new Host;
 $host->expose("*", "8888");
 
-
 $router = new Router;
 
 use Amp\File;
@@ -54,7 +53,7 @@ $socket = Aerys\websocket(new class implements Websocket {
 		// TODO: Implement onHandshake() method.
 	}
 
-	public function onOpen( int $clientId, $handshakeData ) {
+	public function onOpen(int $clientId, $handshakeData) {
 		// TODO: Implement onOpen() method.
 	}
 

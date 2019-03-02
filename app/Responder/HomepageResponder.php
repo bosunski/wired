@@ -9,6 +9,6 @@ class HomePageResponder
 {
 	public function __invoke(Request $request, Response $response)
 	{
-		$response->end("Hello world!");
+		$response->end("Hello world");
 	}
 }
